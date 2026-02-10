@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odjezdy PID</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Odjezdy / Departures</h1>
+        <div id="clock" class="clock">00:00</div>
+    </header>
+
+    <main>
+        <div class="header-row">
+            <span>Linka</span>
+            <span>Směr</span>
+            <span class="align-right">Odjezd</span>
+        </div>
+        <div id="departures-container">
+            <div class="loading">Načítám data...</div>
+        </div>
+    </main>
+
+    <footer>
+        <span id="status-bar">System Online</span>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
