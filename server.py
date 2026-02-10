@@ -18,8 +18,7 @@ CORS(app)
 # Configuration
 PORT = int(os.getenv("PORT", 3000))
 STOP_ID = os.getenv("STOP_ID", "U837Z1P")
-# API_KEY = os.getenv("GOLEMIO_API_KEY")
-API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NDM2NywiaWF0IjoxNzY1NTUxMTY4LCJleHAiOjExNzY1NTUxMTY4LCJpc3MiOiJnb2xlbWlvIiwianRpIjoiOWFkNjhkYTItZDVjNy00NTVhLThiZGEtMWNiYzI1NDlhOGNlIn0.OY05ics8aAAWFU5kl_wjNGPyECUfL9Ql5_gRTXc73yw"
+API_KEY = os.getenv("GOLEMIO_API_KEY")
 GOLEMIO_URL = "https://api.golemio.cz/v2/pid/departureboards"
 
 # --- 2. STARTUP CHECKS (Check your terminal logs!) ---
