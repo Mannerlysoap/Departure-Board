@@ -21,9 +21,9 @@ STOP_ID = os.getenv("STOP_ID", "U837Z1P")
 API_KEY = os.getenv("GOLEMIO_API_KEY")
 GOLEMIO_URL = "https://api.golemio.cz/v2/pid/departureboards"
 
-# --- 2. STARTUP CHECKS (Check your terminal logs!) ---
-print("--- DEBUG STARTUP ---")
-print(f"📍 STOP_ID: {STOP_ID}")
+# --- 2. STARTUP 
+print("DEBUG STARTUP ")
+print(f"STOP_ID: {STOP_ID}")
 if API_KEY:
     print(f"🔑 API_KEY: Loaded ({len(API_KEY)} characters)")
 else:
