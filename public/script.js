@@ -1,3 +1,10 @@
+// Init
+updateClock();
+fetchDepartures();
+setInterval(fetchDepartures, POLL_INTERVAL);
+setInterval(updateClock, 1000);
+
+
 const API_URL = '/api/departures';
 const POLL_INTERVAL = 15000; // 15 seconds
 
@@ -28,7 +35,7 @@ function renderDirection(directionKey, data) {
     container.innerHTML = '';
     
     if (!data || data.length === 0) {
-        container.innerHTML = '<div class="loading">Žádné odjezdy / No departures</div>';
+        container.innerHTML = '<div class="loading">Nic nejede</div>';
         return;
     }
 
@@ -43,10 +50,10 @@ function renderDirection(directionKey, data) {
         div.className = 'departure-row';
         
         let colorClass = 'status-green';
-        if (mins <= 1) colorClass = 'status-red';
+        if (mins <= 2) colorClass = 'status-red';
         else if (mins <= 5) colorClass = 'status-yellow';
 
-        const timeText = mins <= 0 ? "TEĎ" : `${mins} min`;
+        const timeText = mins <= 0 ? ">1" : `${mins} min`;
 
         div.innerHTML = `
             <span class="line-number">${dep.line}</span>
@@ -88,17 +95,12 @@ async function fetchDepartures() {
             }
         });
 
-        statusEl.innerText = "PID Online • " + new Date().toLocaleTimeString('cs-CZ');
+        statusEl.innerText = "Server online • " + new Date().toLocaleTimeString('cs-CZ');
         statusEl.classList.remove('offline');
     } catch (e) {
         console.error(e);
-        statusEl.innerText = "⚠ OFFLINE - Reconnecting...";
+        statusEl.innerText = "offline";
         statusEl.classList.add('offline');
     }
 }
 
-// Init
-updateClock();
-fetchDepartures();
-setInterval(fetchDepartures, POLL_INTERVAL);
-setInterval(updateClock, 1000);

@@ -4,7 +4,6 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
-    # We mount the .env file directly so Python can definitely see it
     volumes:
       - ./.env:/app/.env
       - /etc/localtime:/etc/localtime:ro
