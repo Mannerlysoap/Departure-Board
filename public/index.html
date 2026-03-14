@@ -3,23 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Odjezdy PID</title>
+    <title>Odjezdy</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header>
-        <h1>Za jak dlouho mi to jede?</h1>
+      <h1>JA CHCI DOMU</h1>
         <div id="clock" class="clock">00:00</div>
     </header>
 
     <main>
-        <div class="header-row">
-            <span>Linka</span>
-            <span>Směr</span>
-            <span class="align-right">Odjezd</span>
-        </div>
-        <div id="departures-container">
-            <div class="loading">Načítám data...</div>
+        <div class="boards-container">
+            <!-- Direction 0 -->
+            <div class="board">
+                <h2 id="dir0-label">Směr 1</h2>
+                <div class="header-row">
+                    <span>Linka</span>
+                    <span class="align-center">Směr</span>
+                    <span class="align-right">Odjezd</span>
+                </div>
+                <div id="dir0-container" class="departures-container">
+                    <div class="loading">Načítám data...</div>
+                </div>
+            </div>
+
+            <!-- Direction 1 -->
+            <div class="board">
+                <h2 id="dir1-label">Směr 2</h2>
+                <div class="header-row">
+                    <span>Linka</span>
+                    <span class="align-center">Směr</span>
+                    <span class="align-right">Odjezd</span>
+                </div>
+                <div id="dir1-container" class="departures-container">
+                    <div class="loading">Načítám data...</div>
+                </div>
+            </div>
         </div>
     </main>
 

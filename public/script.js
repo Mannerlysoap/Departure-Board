@@ -1,53 +1,72 @@
 const API_URL = '/api/departures';
-const POLL_INTERVAL = 10000; // 10 seconds
+const POLL_INTERVAL = 15000; // 15 seconds
 
-const container = document.getElementById('departures-container');
 const clockEl = document.getElementById('clock');
 const statusEl = document.getElementById('status-bar');
 
+const containers = {
+    direction0: document.getElementById('dir0-container'),
+    direction1: document.getElementById('dir1-container')
+};
+
 function updateClock() {
     const now = new Date();
-    // Get hours and minutes, ensuring they always have 2 digits (e.g., "09" instead of "9")
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
-    
-    // Insert the HTML with the blinking class
     clockEl.innerHTML = `${hours}<span class="blink">:</span>${minutes}`;
 }
+
 function getMinutes(isoTime) {
     const diff = new Date(isoTime) - new Date();
     return Math.floor(diff / 60000);
 }
 
-function render(data) {
+function renderDirection(directionKey, data) {
+    const container = containers[directionKey];
+    if (!container) return;
+    
     container.innerHTML = '';
     
-    if (data.length === 0) {
-        container.innerHTML = '<div class="departure-row">Žádné odjezdy / No Service</div>';
+    if (!data || data.length === 0) {
+        container.innerHTML = '<div class="loading">Žádné odjezdy / No departures</div>';
         return;
     }
 
-    data.forEach(dep => {
+    // Update Label if possible (e.g. from first departure's destination context, 
+    // but we'll stick to generic or better info if we had it)
+    
+    const activeDeps = data.filter(dep => getMinutes(dep.departureTime) >= -1);
+    
+    activeDeps.slice(0, 12).forEach(dep => {
         const mins = getMinutes(dep.departureTime);
-        if (mins < -1) return; // Hide departed
-
         const div = document.createElement('div');
         div.className = 'departure-row';
         
-        // Color logic
         let colorClass = 'status-green';
         if (mins <= 1) colorClass = 'status-red';
         else if (mins <= 5) colorClass = 'status-yellow';
 
-        // Time logic
         const timeText = mins <= 0 ? "TEĎ" : `${mins} min`;
 
         div.innerHTML = `
             <span class="line-number">${dep.line}</span>
-            <span class="destination">${dep.destination}</span>
+            <div class="destination">
+                <span class="marquee-inner">${dep.destination}</span>
+            </div>
             <span class="align-right ${colorClass}">${timeText}</span>
         `;
         container.appendChild(div);
+
+        // Animate if overflowing
+        const dest = div.querySelector('.destination');
+        const inner = div.querySelector('.marquee-inner');
+        if (inner.offsetWidth > dest.offsetWidth) {
+            dest.classList.add('overflowing');
+            // Duplicate for seamless loop
+            const clone = inner.cloneNode(true);
+            clone.setAttribute('aria-hidden', 'true');
+            dest.appendChild(clone);
+        }
     });
 }
 
@@ -56,7 +75,19 @@ async function fetchDepartures() {
         const res = await fetch(API_URL);
         if(!res.ok) throw new Error("API Error");
         const data = await res.json();
-        render(data);
+        
+        // Data is now grouped by direction
+        renderDirection('direction0', data.direction0);
+        renderDirection('direction1', data.direction1);
+        
+        // Handle any additional directions dynamically if they exist
+        Object.keys(data).forEach(key => {
+            if (key !== 'direction0' && key !== 'direction1' && key.startsWith('direction')) {
+                // For now we only have two slots in HTML, but we could create them
+                console.log("Extra direction found:", key);
+            }
+        });
+
         statusEl.innerText = "PID Online • " + new Date().toLocaleTimeString('cs-CZ');
         statusEl.classList.remove('offline');
     } catch (e) {

@@ -1,75 +1,88 @@
 import os
-import sys
 import time
 import requests
-import traceback
 from datetime import datetime
 from flask import Flask, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
-# --- 1. LOAD CONFIGURATION ---
-# Load .env file from the current directory
+# --- 1. CONFIGURATION ---
 load_dotenv()
 
 app = Flask(__name__, static_folder='public', static_url_path='')
 CORS(app)
 
-# Configuration
 PORT = int(os.getenv("PORT", 3000))
-STOP_ID = os.getenv("STOP_ID", "U837Z1P")
+# Default to a placeholder if not provided. 
+# 1262 is the cisId for "Průběžná" in Prague.
+CIS_ID = os.getenv("TARGET_NODE_CISID") or os.getenv("CIS_ID", "1262")
 API_KEY = os.getenv("GOLEMIO_API_KEY")
-GOLEMIO_URL = "https://api.golemio.cz/v2/pid/departureboards"
 
-# --- 2. STARTUP 
-print("DEBUG STARTUP ")
-print(f"STOP_ID: {STOP_ID}")
-if API_KEY:
-    print(f"🔑 API_KEY: Loaded ({len(API_KEY)} characters)")
-else:
-    print("❌ API_KEY: MISSING or EMPTY! Check your .env file.")
-print("---------------------")
+# New configuration for filtering Direction 2
+DIR2_ENDSTATION = os.getenv("DIR2_ENDSTATION", "")
+
+GOLEMIO_URL = "https://api.golemio.cz/v2/pid/departureboards"
 
 # In-Memory Cache
 cache = {"data": None, "last_fetch": 0}
 
 def transform_data(api_response):
     """
-    Safely transforms Golemio API data for the frontend.
+    Transforms Golemio V2 response into a unified format grouped by direction.
     """
-    cleaned_data = []
+    raw_list = api_response.get("departures", []) if isinstance(api_response, dict) else api_response
     
-    # Normalize input to a list
-    raw_list = []
-    if isinstance(api_response, list):
-        raw_list = api_response
-    elif isinstance(api_response, dict):
-        raw_list = api_response.get("departures", [])
+    grouped_data = {
+        "direction0": [], # Direction 1 column
+        "direction1": []  # Direction 2 column
+    }
     
     for dep in raw_list:
         try:
-            # Safe extraction with defaults
             route = dep.get("route", {}) or {}
             trip = dep.get("trip", {}) or {}
             timestamps = dep.get("departure_timestamp", {}) or {}
+            delay = dep.get("delay", {}) or {}
 
-            # Time Logic
+            # Time calculation
             predicted = timestamps.get("predicted")
             scheduled = timestamps.get("scheduled")
-            # If both are None, use current time to prevent crash
-            final_time = predicted if predicted else (scheduled if scheduled else datetime.now().isoformat())
+            final_time = predicted if predicted else (scheduled if scheduled else "")
+            
+            if not final_time:
+                continue
 
-            cleaned_data.append({
-                "line": route.get("short_name", "?"),
-                "destination": trip.get("headsign", "Unknown"),
+            # Delay
+            delay_min = delay.get("minutes", dep.get("delay_minutes", 0))
+            destination = trip.get("headsign", dep.get("headsign", "Unknown"))
+            
+            departure_item = {
+                "line": route.get("short_name", dep.get("line", "?")),
+                "destination": destination,
                 "departureTime": final_time,
-                "isDelay": (dep.get("delay_minutes", 0) > 0)
-            })
-        except Exception:
-            # If one row fails, skip it but don't crash the server
+                "isDelay": (delay_min > 0) if delay_min is not None else False,
+                "delay": delay_min,
+                "platform": dep.get("platform", "")
+            }
+            
+            # Map to direction
+            # If DIR2_ENDSTATION is defined, we check if destination matches.
+            # Otherwise, we use direction_id from API.
+            is_dir2 = False
+            if DIR2_ENDSTATION and DIR2_ENDSTATION.lower() in destination.lower():
+                is_dir2 = True
+            else:
+                # Fallback to API direction_id (1 is usually the "other" way)
+                is_dir2 = (trip.get("direction_id", dep.get("direction_id", 0)) == 1)
+
+            key = "direction1" if is_dir2 else "direction0"
+            grouped_data[key].append(departure_item)
+            
+        except Exception as e:
+            print(f"Error processing departure: {e}")
             continue
 
-    return cleaned_data
+    return grouped_data
 
 @app.route('/')
 def index():
@@ -80,55 +93,44 @@ def get_departures():
     global cache
     now = time.time()
 
-    # Serve Cache
-    if cache["data"] and (now - cache["last_fetch"] < 60):
-        print(f"[CACHE] Serving {len(cache['data'])} items")
+    # Serve from cache if within TTL (30s)
+    if cache["data"] and (now - cache["last_fetch"] < 30):
         return jsonify(cache["data"])
-
-    print("[FETCH] Requesting data from Golemio...")
 
     try:
         if not API_KEY:
-            raise ValueError("API Key is missing. Check server logs.")
+            return jsonify({"error": "Configuration Error", "details": "API Key missing"}), 500
 
         headers = {
             "X-Access-Token": API_KEY,
             "Content-Type": "application/json"
         }
+        
+        # Use cisIds for station-wide aggregation
         params = {
-            "ids": STOP_ID,
+            "cisIds": CIS_ID,
             "minutesAfter": 60,
-            "limit": 12,
+            "limit": 30, # Increased limit to ensure we get both directions
             "mode": "departures"
         }
 
+        print(f"[FETCH] Requesting departures for cisId: {CIS_ID}")
         response = requests.get(GOLEMIO_URL, headers=headers, params=params, timeout=10)
         
-        # If API returns 401/404/500, this raises an error
-        response.raise_for_status()
-
-        # Transform
+        if response.status_code != 200:
+            return jsonify({"error": f"Golemio API Error {response.status_code}", "details": response.text}), response.status_code
+            
         data = transform_data(response.json())
-        
-        # Update Cache
         cache["data"] = data
         cache["last_fetch"] = now
         
-        print(f"[SUCCESS] Fetched {len(data)} items")
         return jsonify(data)
 
     except Exception as e:
-        # --- DEBUG MODE: SEND ERROR TO BROWSER ---
-        error_msg = f"{type(e).__name__}: {str(e)}"
-        print(f"❌ ERROR: {error_msg}")
-        traceback.print_exc()
-        
-        # Return the actual error details to the frontend
-        return jsonify({
-            "error": "Backend Error",
-            "details": error_msg,
-            "tip": "Check docker logs for full stack trace"
-        }), 500
+        return jsonify({"error": "Internal Server Error", "details": str(e)}), 500
 
 if __name__ == '__main__':
+    print(f"Starting server on port {PORT}...")
+    print(f"Monitoring CIS ID: {CIS_ID}")
+    print(f"Filtering Direction 2 by: {DIR2_ENDSTATION}")
     app.run(host='0.0.0.0', port=PORT)
