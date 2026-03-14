@@ -1,9 +1,3 @@
-// Init
-updateClock();
-fetchDepartures();
-setInterval(fetchDepartures, POLL_INTERVAL);
-setInterval(updateClock, 1000);
-
 
 const API_URL = '/api/departures';
 const POLL_INTERVAL = 15000; // 15 seconds
@@ -103,4 +97,10 @@ async function fetchDepartures() {
         statusEl.classList.add('offline');
     }
 }
+
+updateClock();
+fetchDepartures();
+setInterval(fetchDepartures, POLL_INTERVAL);
+setInterval(updateClock, 1000);
+
 
