@@ -14,7 +14,6 @@ CORS(app)
 
 PORT = int(os.getenv("PORT", 3000))
 # Default to a placeholder if not provided. 
-# 1262 is the cisId for "Průběžná" in Prague.
 CIS_ID = os.getenv("TARGET_NODE_CISID") or os.getenv("CIS_ID", "1262")
 API_KEY = os.getenv("GOLEMIO_API_KEY")
 
@@ -65,7 +64,6 @@ def transform_data(api_response):
                 "platform": dep.get("platform", "")
             }
             
-            # Map to direction
             # If DIR2_ENDSTATION is defined, we check if destination matches.
             # Otherwise, we use direction_id from API.
             is_dir2 = False
