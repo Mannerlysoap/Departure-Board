@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Departure Board</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
+        .field { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .message { margin-top: 20px; padding: 10px; display: none; }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    </style>
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+    <form id="config-form">
+        <div class="field">
+            <label for="header_title">Header Title:</label>
+            <input type="text" id="header_title" name="header_title" value="{{ config.header_title }}">
+        </div>
+        <div class="field">
+            <label for="dir0_label">Direction 0 Label:</label>
+            <input type="text" id="dir0_label" name="dir0_label" value="{{ config.dir0_label }}">
+        </div>
+        <div class="field">
+            <label for="dir1_label">Direction 1 Label:</label>
+            <input type="text" id="dir1_label" name="dir1_label" value="{{ config.dir1_label }}">
+        </div>
+        <div class="field">
+            <label for="status_bar">Status Bar:</label>
+            <input type="text" id="status_bar" name="status_bar" value="{{ config.status_bar }}">
+        </div>
+        <div class="field">
+            <label for="image_overlay_text">Image Overlay Text (e.g., "AD"):</label>
+            <input type="text" id="image_overlay_text" name="image_overlay_text" value="{{ config.image_overlay_text }}">
+        </div>
+        <button type="submit">Save Changes</button>
+    </form>
+    <div id="message" class="message success">Settings saved successfully!</div>
+
+    <hr>
+    <h2>Display Image</h2>
+    <form id="upload-form">
+        <div class="field">
+            <label for="image_file">Upload Square Image:</label>
+            <input type="file" id="image_file" name="file" accept="image/*">
+        </div>
+        <button type="submit">Upload Image</button>
+    </form>
+    <div id="upload-message" class="message success">Image uploaded successfully!</div>
+
+    <script>
+        // Existing config form script
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            const response = await fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            if (response.ok) {
+                const msg = document.getElementById('message');
+                msg.style.display = 'block';
+                setTimeout(() => { msg.style.display = 'none'; }, 3000);
+            } else {
+                alert('Failed to save settings.');
+            }
+        });
+
+        // Image upload script
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('image_file');
+            if (fileInput.files.length === 0) {
+                alert('Please select a file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const msg = document.getElementById('upload-message');
+                msg.style.display = 'block';
+                setTimeout(() => { msg.style.display = 'none'; }, 3000);
+            } else {
+                const error = await response.json();
+                alert('Upload failed: ' + (error.error || 'Unknown error'));
+            }
+        });
+    </script>
+</body>
+</html>

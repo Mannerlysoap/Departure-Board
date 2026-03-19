@@ -13,8 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the app
 COPY . .
 
-# Expose the port
+# Expose the ports
 EXPOSE 3000
+EXPOSE 7171
 
 # Run the server
 CMD ["python", "server.py"]
