@@ -81,7 +81,7 @@ function renderDirection(directionKey, data) {
         if (mins <= 2) colorClass = 'status-red';
         else if (mins <= 5) colorClass = 'status-yellow';
 
-        const timeText = mins <= 0 ? "TED" : `${mins} min`;
+        const timeText = mins <= 0 ? ">1 min" : `${mins} min`;
 
         div.innerHTML = `
             <span class="line-number">${dep.line}</span>
@@ -92,10 +92,10 @@ function renderDirection(directionKey, data) {
         `;
         container.appendChild(div);
 
-        // Animate if overflowing
+        // Animate if overflowing (enabled for left column/direction0, disabled for right/direction1)
         const dest = div.querySelector('.destination');
         const inner = div.querySelector('.marquee-inner');
-        if (inner.offsetWidth > dest.offsetWidth) {
+        if (directionKey === 'direction0' && inner.offsetWidth > dest.offsetWidth) {
             dest.classList.add('overflowing');
             const clone = inner.cloneNode(true);
             clone.setAttribute('aria-hidden', 'true');
