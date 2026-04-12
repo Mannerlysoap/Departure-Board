@@ -81,7 +81,7 @@ function renderDirection(directionKey, data) {
         if (mins <= 2) colorClass = 'status-red';
         else if (mins <= 5) colorClass = 'status-yellow';
 
-        const timeText = mins <= 0 ? ">1 min" : `${mins} min`;
+        const timeText = mins <= 0 ? "<1 min" : `${mins} min`;
 
         div.innerHTML = `
             <span class="line-number">${dep.line}</span>
