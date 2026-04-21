@@ -14,6 +14,9 @@ from dotenv import load_dotenv
 # --- 1. CONFIGURATION ---
 load_dotenv()
 
+# Global version for change tracking
+config_version = int(time.time())
+
 # Setup Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 logger = logging.getLogger(__name__)
@@ -50,7 +53,9 @@ def load_config():
         "dir1_label": "Na spojku",
         "status_bar": "System Online",
         "image_filename": "",
-        "image_overlay_text": ""
+        "image_overlay_text": "",
+        "selected_images": [],
+        "cycle_interval": 10
     }
     if os.path.exists(CONFIG_FILE):
         try:
@@ -61,19 +66,32 @@ def load_config():
             logger.error(f"Error loading config: {e}")
     
     # Ensure all keys exist
-    if "image_filename" not in config:
-        config["image_filename"] = ""
-    if "image_overlay_text" not in config:
-        config["image_overlay_text"] = ""
+    for key in ["image_filename", "image_overlay_text", "selected_images", "cycle_interval"]:
+        if key not in config:
+            if key == "selected_images": config[key] = []
+            elif key == "cycle_interval": config[key] = 10
+            else: config[key] = ""
     return config
 
 def save_config(data):
+    global config_version
     # Load current config to merge
     current = load_config()
     current.update(data)
+    # Ensure types are correct
+    if "cycle_interval" in current:
+        try:
+            current["cycle_interval"] = int(current["cycle_interval"])
+        except:
+            current["cycle_interval"] = 10
+    if "selected_images" in current and not isinstance(current["selected_images"], list):
+        current["selected_images"] = []
+
     with open(CONFIG_FILE, 'w') as f:
         json.dump(current, f, indent=2)
-    logger.info(f"[ADMIN] Configuration updated and saved to {CONFIG_FILE}")
+    
+    config_version = int(time.time())
+    logger.info(f"[ADMIN] Configuration updated and saved to {CONFIG_FILE}. New version: {config_version}")
 
 # --- 3. BASIC AUTH DECORATOR ---
 def check_auth(username, password):
@@ -158,6 +176,10 @@ def get_public_config():
     response.headers['Expires'] = '0'
     return response
 
+@public_app.route('/api/version')
+def get_version():
+    return jsonify({"version": config_version})
+
 @public_app.route('/api/departures')
 def get_departures():
     global cache
@@ -196,7 +218,7 @@ admin_app = Flask(__name__, template_folder='templates')
 def admin_index():
     logger.info(f"[ADMIN] GET / - {request.remote_addr}")
     config = load_config()
-    return render_template('admin.html', config=config)
+    return render_template('admin.html', config=config, version=config_version)
 
 @admin_app.route('/api/config', methods=['POST'])
 @requires_auth
@@ -205,6 +227,30 @@ def update_config():
     new_config = request.json
     save_config(new_config)
     return jsonify({"status": "success"})
+
+@admin_app.route('/api/images', methods=['GET'])
+@requires_auth
+def list_images():
+    files = [f for f in os.listdir(UPLOAD_FOLDER) if allowed_file(f)]
+    return jsonify(files)
+
+@admin_app.route('/api/images/<filename>', methods=['DELETE'])
+@requires_auth
+def delete_image(filename):
+    logger.info(f"[ADMIN] DELETE /api/images/{filename} - {request.remote_addr}")
+    filename = secure_filename(filename)
+    file_path = os.path.join(UPLOAD_FOLDER, filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        # Also remove from selected_images in config
+        config = load_config()
+        if filename in config.get('selected_images', []):
+            config['selected_images'].remove(filename)
+        if config.get('image_filename') == filename:
+            config['image_filename'] = config['selected_images'][0] if config['selected_images'] else ""
+        save_config(config)
+        return jsonify({"status": "success"})
+    return jsonify({"error": "File not found"}), 404
 
 @admin_app.route('/api/upload', methods=['POST'])
 @requires_auth
@@ -225,6 +271,11 @@ def upload_file():
         # Update config with filename
         config = load_config()
         config['image_filename'] = filename
+        # Add to selected_images if not already there
+        if 'selected_images' not in config:
+            config['selected_images'] = []
+        if filename not in config['selected_images']:
+            config['selected_images'].append(filename)
         save_config(config)
         
         return jsonify({"status": "success", "filename": filename})

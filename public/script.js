@@ -13,6 +13,26 @@ const containers = {
     direction1: document.getElementById('dir1-container')
 };
 
+let cycleIndex = 0;
+let cycleIntervalId = null;
+let initialVersion = null;
+
+async function checkVersion() {
+    try {
+        const res = await fetch(`/api/version?t=${new Date().getTime()}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (initialVersion === null) {
+            initialVersion = data.version;
+        } else if (initialVersion !== data.version) {
+            console.log("Config version changed, reloading...");
+            window.location.reload();
+        }
+    } catch (e) {
+        console.error("Failed to check version:", e);
+    }
+}
+
 async function fetchConfig() {
     try {
         const res = await fetch(`${CONFIG_URL}?t=${new Date().getTime()}`);
@@ -23,27 +43,61 @@ async function fetchConfig() {
         if (dir0LabelEl) dir0LabelEl.innerText = config.dir0_label;
         if (dir1LabelEl) dir1LabelEl.innerText = config.dir1_label;
         
-        const imgEl = document.getElementById('display-image');
         const overlayEl = document.getElementById('image-overlay');
-        
-        if (config.image_filename) {
-            imgEl.src = `/uploads/${config.image_filename}?t=${new Date().getTime()}`;
-            imgEl.style.display = 'block';
-            
-            if (config.image_overlay_text) {
-                overlayEl.innerText = config.image_overlay_text;
-                overlayEl.style.display = 'block';
-            } else {
-                overlayEl.style.display = 'none';
-            }
+        if (config.image_overlay_text) {
+            overlayEl.innerText = config.image_overlay_text;
+            overlayEl.style.display = 'block';
         } else {
-            imgEl.style.display = 'none';
             overlayEl.style.display = 'none';
         }
 
+        // Handle Image Cycling
+        const oldConfig = window.siteConfig;
         window.siteConfig = config;
+
+        // Restart cycling if config changed or if it's the first run
+        if (!oldConfig || 
+            JSON.stringify(oldConfig.selected_images) !== JSON.stringify(config.selected_images) || 
+            oldConfig.cycle_interval !== config.cycle_interval) {
+            startCycling();
+        }
+        
     } catch (e) {
         console.error("Failed to fetch config:", e);
+    }
+}
+
+function startCycling() {
+    if (cycleIntervalId) clearInterval(cycleIntervalId);
+    
+    const config = window.siteConfig;
+    if (!config || !config.selected_images || config.selected_images.length === 0) {
+        document.getElementById('display-image').style.display = 'none';
+        return;
+    }
+
+    cycleIndex = 0;
+    updateDisplayImage();
+
+    if (config.selected_images.length > 1) {
+        const intervalMs = (config.cycle_interval || 10) * 1000;
+        cycleIntervalId = setInterval(() => {
+            cycleIndex = (cycleIndex + 1) % config.selected_images.length;
+            updateDisplayImage();
+        }, intervalMs);
+    }
+}
+
+function updateDisplayImage() {
+    const config = window.siteConfig;
+    const imgEl = document.getElementById('display-image');
+    
+    if (config.selected_images && config.selected_images.length > 0) {
+        const filename = config.selected_images[cycleIndex];
+        imgEl.src = `/uploads/${filename}?t=${new Date().getTime()}`;
+        imgEl.style.display = 'block';
+    } else {
+        imgEl.style.display = 'none';
     }
 }
 
@@ -92,10 +146,10 @@ function renderDirection(directionKey, data) {
         `;
         container.appendChild(div);
 
-        // Animate if overflowing (enabled for left column/direction0, disabled for right/direction1)
+        // Animate if overflowing
         const dest = div.querySelector('.destination');
         const inner = div.querySelector('.marquee-inner');
-        if (directionKey === 'direction0' && inner.offsetWidth > dest.offsetWidth) {
+        if (inner.offsetWidth > dest.offsetWidth) {
             dest.classList.add('overflowing');
             const clone = inner.cloneNode(true);
             clone.setAttribute('aria-hidden', 'true');
@@ -130,6 +184,7 @@ fetchConfig().then(() => {
 updateClock();
 
 // Intervals
+setInterval(checkVersion, 5000); // Check for updates every 5 seconds
 setInterval(fetchConfig, 60000);
 setInterval(fetchDepartures, POLL_INTERVAL);
 setInterval(updateClock, 1000);

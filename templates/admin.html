@@ -5,77 +5,192 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Departure Board</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; }
-        .field { margin-bottom: 20px; }
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background-color: #f4f4f9; }
+        h1, h2 { color: #333; }
+        .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .field { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
-        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; cursor: pointer; }
+        input[type="text"], input[type="number"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
         button:hover { background-color: #0056b3; }
-        .message { margin-top: 20px; padding: 10px; display: none; }
+        button.delete { background-color: #dc3545; padding: 5px 10px; font-size: 12px; }
+        button.delete:hover { background-color: #c82333; }
+        .message { margin-top: 20px; padding: 10px; display: none; border-radius: 4px; }
         .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        
+        .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+        .image-card { border: 1px solid #ddd; padding: 10px; border-radius: 4px; text-align: center; background: #fff; }
+        .image-card img { max-width: 100%; height: 100px; object-fit: cover; display: block; margin: 0 auto 10px; border-radius: 2px; }
+        .image-card label { font-weight: normal; font-size: 12px; word-break: break-all; }
+        .image-card input[type="checkbox"] { margin-right: 5px; }
     </style>
 </head>
 <body>
-    <h1>Admin Dashboard</h1>
-    <form id="config-form">
-        <div class="field">
-            <label for="header_title">Header Title:</label>
-            <input type="text" id="header_title" name="header_title" value="{{ config.header_title }}">
-        </div>
-        <div class="field">
-            <label for="dir0_label">Direction 0 Label:</label>
-            <input type="text" id="dir0_label" name="dir0_label" value="{{ config.dir0_label }}">
-        </div>
-        <div class="field">
-            <label for="dir1_label">Direction 1 Label:</label>
-            <input type="text" id="dir1_label" name="dir1_label" value="{{ config.dir1_label }}">
-        </div>
-        <div class="field">
-            <label for="status_bar">Status Bar:</label>
-            <input type="text" id="status_bar" name="status_bar" value="{{ config.status_bar }}">
-        </div>
-        <div class="field">
-            <label for="image_overlay_text">Image Overlay Text (e.g., "AD"):</label>
-            <input type="text" id="image_overlay_text" name="image_overlay_text" value="{{ config.image_overlay_text }}">
-        </div>
-        <button type="submit">Save Changes</button>
-    </form>
-    <div id="message" class="message success">Settings saved successfully!</div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <h1>Tady se to da menit yk ₍^. .^₎Ⳋ</h1>
+        <div style="font-size: 14px; color: #666;">Version: <span id="config-version">{{ version }}</span></div>
+    </div>
+    
+    <div class="section">
+        <h2>General Config</h2>
+        <form id="config-form">
+            <div class="field">
+                <label for="header_title">Header Title:</label>
+                <input type="text" id="header_title" name="header_title" value="{{ config.header_title }}">
+            </div>
+            <div class="field">
+                <label for="dir0_label">Direction 0 Label:</label>
+                <input type="text" id="dir0_label" name="dir0_label" value="{{ config.dir0_label }}">
+            </div>
+            <div class="field">
+                <label for="dir1_label">Direction 1 Label:</label>
+                <input type="text" id="dir1_label" name="dir1_label" value="{{ config.dir1_label }}">
+            </div>
+            <div class="field">
+                <label for="status_bar">Status Bar:</label>
+                <input type="text" id="status_bar" name="status_bar" value="{{ config.status_bar }}">
+            </div>
+            <div class="field">
+                <label for="image_overlay_text">Image Overlay Text:</label>
+                <input type="text" id="image_overlay_text" name="image_overlay_text" value="{{ config.image_overlay_text }}">
+            </div>
+            <div class="field">
+                <label for="cycle_interval">Cycle Interval (seconds):</label>
+                <input type="number" id="cycle_interval" name="cycle_interval" value="{{ config.cycle_interval }}" min="1">
+            </div>
+            <button type="submit">Save Settings</button>
+        </form>
+        <div id="message" class="message success">Settings saved successfully!</div>
+    </div>
 
-    <hr>
-    <h2>Display Image</h2>
-    <form id="upload-form">
-        <div class="field">
-            <label for="image_file">Upload Square Image:</label>
-            <input type="file" id="image_file" name="file" accept="image/*">
+    <div class="section">
+        <h2>Upload Image</h2>
+        <form id="upload-form">
+            <div class="field">
+                <label for="image_file">Upload New Image:</label>
+                <input type="file" id="image_file" name="file" accept="image/*">
+            </div>
+            <button type="submit">Upload & Add to Cycle</button>
+        </form>
+        <div id="upload-message" class="message success">Image uploaded successfully!</div>
+    </div>
+
+    <div class="section">
+        <h2>Image Gallery & Cycling</h2>
+        <p>Select images to include in the rotation:</p>
+        <div id="image-gallery" class="gallery">
+            <!-- Images will be loaded here -->
+            <p>Loading images...</p>
         </div>
-        <button type="submit">Upload Image</button>
-    </form>
-    <div id="upload-message" class="message success">Image uploaded successfully!</div>
+        <div style="margin-top: 20px;">
+            <button id="save-selection">Save Image Selection</button>
+        </div>
+    </div>
 
     <script>
-        // Existing config form script
+        let currentConfig = {{ config|tojson }};
+
+        async function fetchImages() {
+            const response = await fetch('/api/images');
+            const images = await response.json();
+            renderGallery(images);
+        }
+
+        function renderGallery(images) {
+            const container = document.getElementById('image-gallery');
+            container.innerHTML = '';
+            
+            if (images.length === 0) {
+                container.innerHTML = '<p>No images uploaded yet.</p>';
+                return;
+            }
+
+            images.forEach(img => {
+                const isSelected = currentConfig.selected_images.includes(img);
+                const card = document.createElement('div');
+                card.className = 'image-card';
+                card.innerHTML = `
+                    <img src="/uploads/${img}" alt="${img}">
+                    <label>
+                        <input type="checkbox" class="img-select" value="${img}" ${isSelected ? 'checked' : ''}>
+                        ${img}
+                    </label>
+                    <div style="margin-top: 10px;">
+                        <button class="delete" onclick="deleteImage('${img}')">Delete</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function deleteImage(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+            
+            const response = await fetch(`/api/images/${filename}`, { method: 'DELETE' });
+            if (response.ok) {
+                // Update local selected_images if it was there
+                currentConfig.selected_images = currentConfig.selected_images.filter(i => i !== filename);
+                fetchImages();
+            } else {
+                alert('Failed to delete image.');
+            }
+        }
+
+        function updateVersion() {
+            document.getElementById('config-version').innerText = Math.floor(Date.now() / 1000);
+        }
+
         document.getElementById('config-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
+            data.cycle_interval = parseInt(data.cycle_interval);
             
+            // Merge with existing selection
+            const payload = { ...currentConfig, ...data };
+
             const response = await fetch('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                body: JSON.stringify(payload)
             });
             
             if (response.ok) {
-                const msg = document.getElementById('message');
-                msg.style.display = 'block';
-                setTimeout(() => { msg.style.display = 'none'; }, 3000);
+                currentConfig = payload;
+                showMsg('message');
+                updateVersion();
             } else {
                 alert('Failed to save settings.');
             }
         });
 
-        // Image upload script
+        document.getElementById('save-selection').addEventListener('click', async () => {
+            const checkboxes = document.querySelectorAll('.img-select:checked');
+            const selected = Array.from(checkboxes).map(cb => cb.value);
+            
+            const payload = { ...currentConfig, selected_images: selected };
+            // If nothing selected, or current image_filename is not in selection, pick first or clear
+            if (selected.length > 0 && !selected.includes(payload.image_filename)) {
+                payload.image_filename = selected[0];
+            } else if (selected.length === 0) {
+                payload.image_filename = "";
+            }
+
+            const response = await fetch('/api/config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                currentConfig = payload;
+                alert('Selection saved!');
+                updateVersion();
+            } else {
+                alert('Failed to save selection.');
+            }
+        });
+
         document.getElementById('upload-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const fileInput = document.getElementById('image_file');
@@ -93,14 +208,29 @@
             });
 
             if (response.ok) {
-                const msg = document.getElementById('upload-message');
-                msg.style.display = 'block';
-                setTimeout(() => { msg.style.display = 'none'; }, 3000);
+                const data = await response.json();
+                // Add new image to selection automatically
+                if (!currentConfig.selected_images.includes(data.filename)) {
+                    currentConfig.selected_images.push(data.filename);
+                }
+                showMsg('upload-message');
+                fileInput.value = '';
+                fetchImages();
+                updateVersion();
             } else {
                 const error = await response.json();
                 alert('Upload failed: ' + (error.error || 'Unknown error'));
             }
         });
+
+        function showMsg(id) {
+            const msg = document.getElementById(id);
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        }
+
+        // Initial load
+        fetchImages();
     </script>
 </body>
 </html>

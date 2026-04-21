@@ -1,8 +1,14 @@
 {
-  "header_title": "-_-",
+  "header_title": "Odjezdy",
   "dir0_label": "Centrum",
   "dir1_label": "Spojovac\u00ed",
-  "status_bar": "system? what? running???",
-  "image_filename": "redmoon-wallpaper.png",
-  "image_overlay_text": "ads.prazacka"
+  "status_bar": "END IS NEAR",
+  "image_filename": "snapshot_2025-11-26_15-02-43.png",
+  "image_overlay_text": "ads.prazacka",
+  "selected_images": [
+    "hornet-sikpost-edgemag.jpeg",
+    "snapshot_2025-11-26_15-02-43.png",
+    "20260316_152133.gif"
+  ],
+  "cycle_interval": 2
 }
